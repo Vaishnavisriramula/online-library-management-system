@@ -2,7 +2,7 @@
 const Database = require("better-sqlite3");
 const bcrypt = require("bcryptjs");
 
-const db = new Database("library.db");
+const db = new Database(process.env.DB_PATH || "library.db");
 
 db.pragma("foreign_keys = ON");
 

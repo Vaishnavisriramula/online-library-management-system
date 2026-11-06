@@ -1,0 +1,9 @@
+
+node_modules
+library.db
+library.db-shm
+library.db-wal
+.git
+.env
+tests
+npm-debug.log
