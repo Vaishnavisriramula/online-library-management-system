@@ -1,6 +1,6 @@
 
 const { Builder, By, until } = require("selenium-webdriver");
-const assert = require("node:assert/strict");
+const chrome = require("selenium-webdriver/chrome");
 
 async function runTests() {
     let driver;
@@ -12,14 +12,28 @@ async function runTests() {
     const studentPassword = "Student@123";
 
     try {
+        const options = new chrome.Options();
+
+        if (process.env.HEADLESS === "true") {
+            options.addArguments(
+                "--headless=new",
+                "--window-size=1400,1000"
+            );
+        }
+
         driver = await new Builder()
             .forBrowser("chrome")
+            .setChromeOptions(options)
             .build();
 
-        await driver.manage().window().maximize();
-        await driver.get("http://localhost:3000");
+        if (process.env.HEADLESS !== "true") {
+            await driver.manage().window().maximize();
+        }
 
-        // Retry when the webpage replaces an element
+        await driver.get(
+            process.env.BASE_URL || "http://localhost:3000"
+        );
+
         async function click(locator) {
             await driver.wait(async () => {
                 try {
@@ -27,9 +41,11 @@ async function runTests() {
                     await element.click();
                     return true;
                 } catch (error) {
-                    if (["StaleElementReferenceError",
-                         "NoSuchElementError",
-                         "ElementClickInterceptedError"].includes(error.name)) {
+                    if ([
+                        "StaleElementReferenceError",
+                        "NoSuchElementError",
+                        "ElementClickInterceptedError"
+                    ].includes(error.name)) {
                         return false;
                     }
                     throw error;
@@ -45,8 +61,10 @@ async function runTests() {
                     await element.sendKeys(String(value));
                     return true;
                 } catch (error) {
-                    if (["StaleElementReferenceError",
-                         "NoSuchElementError"].includes(error.name)) {
+                    if ([
+                        "StaleElementReferenceError",
+                        "NoSuchElementError"
+                    ].includes(error.name)) {
                         return false;
                     }
                     throw error;
@@ -60,8 +78,10 @@ async function runTests() {
                     const element = await driver.findElement(By.id(id));
                     return await element.isDisplayed();
                 } catch (error) {
-                    if (["StaleElementReferenceError",
-                         "NoSuchElementError"].includes(error.name)) {
+                    if ([
+                        "StaleElementReferenceError",
+                        "NoSuchElementError"
+                    ].includes(error.name)) {
                         return false;
                     }
                     throw error;
@@ -73,7 +93,6 @@ async function runTests() {
             await driver.wait(condition, 12000, message);
         }
 
-        // Read current book data without keeping old elements
         async function getBook() {
             return driver.executeScript((title) => {
                 const rows = document.querySelectorAll(
@@ -83,8 +102,10 @@ async function runTests() {
                 for (const row of rows) {
                     const cells = row.querySelectorAll("td");
 
-                    if (cells.length >= 4 &&
-                        cells[1].textContent.trim() === title) {
+                    if (
+                        cells.length >= 4 &&
+                        cells[1].textContent.trim() === title
+                    ) {
                         return {
                             id: Number(cells[0].textContent.trim()),
                             quantity: Number(cells[3].textContent.trim())
@@ -105,9 +126,11 @@ async function runTests() {
                 for (const row of rows) {
                     const cells = row.querySelectorAll("td");
 
-                    if (cells.length === 8 &&
+                    if (
+                        cells.length === 8 &&
                         cells[1].textContent.includes(student) &&
-                        cells[2].textContent.includes(title)) {
+                        cells[2].textContent.includes(title)
+                    ) {
                         return {
                             fine: Number(cells[6].textContent.trim()),
                             action: cells[7].textContent.trim()
@@ -132,7 +155,6 @@ async function runTests() {
 
         // TC01 - Admin Login
         await adminLogin();
-
         console.log("TC01 PASSED: Admin Login");
 
         // TC02 - Add Book
@@ -179,7 +201,7 @@ async function runTests() {
 
         await click(By.id("showAllBooksButton"));
 
-        // Register a student for book issue testing
+        // Student Registration
         await click(By.id("adminLogout"));
         await waitVisible("authSection");
 
@@ -199,7 +221,6 @@ async function runTests() {
         console.log("Student Registration PASSED");
 
         // Student Login
-        // Clear email because registration may auto-fill it
         await fill("studentEmail", studentEmail);
         await fill("studentPassword", studentPassword);
 
